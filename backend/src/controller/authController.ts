@@ -1,10 +1,10 @@
 import type { AuthRequest } from "../middleware/auth";
-import type {Response, Request} from "express";
+import type {Response, Request,NextFunction} from "express";
 import { User } from "../models/User";
 import { clerkClient, getAuth } from "@clerk/express";
 
 
-export async function getMe(req: AuthRequest, res: Response) {
+export async function getMe(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const userId = req.userId
 
@@ -20,11 +20,11 @@ export async function getMe(req: AuthRequest, res: Response) {
   } catch (error) {
     res.status(500).json({message: "internal server error"})
 
-    // next()
+    next()
   }
 }
 
-export async function authCallback (req: Request, res: Response) {
+export async function authCallback (req: Request, res: Response, next: NextFunction) {
     try{
         const {userId: clerkId} = getAuth(req)
 
@@ -41,14 +41,19 @@ if(!user){
     const clerkUser = await clerkClient.users.getUser(clerkId)
     user = await User.create({
         clerkId,
-         Name: clerkUser.firstName
-        email: clerkUser.?emailAddresses[0].emailAddress,,
-        lastName: clerkUser.lastName,
-        imageUrl: clerkUser.imageUrl
-    })
-}
-    } catch (error) {
+         name: clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ""} `.trim() 
+         : clerkUser.emailAddresses[0]?.emailAddress.split("@")[0], 
+         email: clerkUser.emailAddresses[0]?.emailAddress,
+         avatar: clerkUser.imageUrl
+        
+        
+    });
 
+}
+res.json(user)
+    } catch (error) {
+      res.status(500);
+      next(error)
     }
 
     
